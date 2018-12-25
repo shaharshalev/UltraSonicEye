@@ -21,7 +21,7 @@ struct UltraSonic {
       return lastDistanceSample = (duration * 0.034 / 2);
     }
 
-    int calcAvg() {
+    int calcAvgDistance() {
       int sum = 0;
       for (int i = 0; i < MAX_SAMPLES; i++) {
         sum += calcDistance();
@@ -37,8 +37,8 @@ struct UltraSonic {
       pinMode(echoPin, INPUT); // Sets the echoPin as an Input
       //we start taking a first sample for init height
       delay(1000);// wait for a sec
-      calcAvg(); //to get more clear results we dump first results
-      initHeight = calcAvg();
+      calcAvgDistance(); //to get more clear results we dump first results
+      initHeight = calcAvgDistance();
     }
 
 
@@ -112,8 +112,8 @@ void vibAll() {
 void loop() {
   readColorFromBluetooth();
 
-  int dis_right = rightUS.calcDistance();
-  int dis_left = leftUS.calcDistance();
+  int dis_right = rightUS.calcAvgDistance();
+  int dis_left = leftUS.calcAvgDistance();
 
   hc.println("right:" + String(dis_right));
   hc.println("left:" + String(dis_left));
