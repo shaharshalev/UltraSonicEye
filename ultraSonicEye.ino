@@ -1,17 +1,16 @@
 
 #include <SoftwareSerial.h>
 struct UltraSonic {
-
-  
-    const int MAX_SAMPLES = 10;
+    const int MAX_SAMPLES = 30;
+    const int MAX_THRESHOLD = 20;
     String objName;
     int initHeight;
     int trigPin;
     int echoPin;
+    long lastDistanceSample;
 
-    
   public:
-    int calcDistance() {
+    long calcDistance() {
       long duration;
       digitalWrite(trigPin, LOW);
       delayMicroseconds(5);
@@ -19,7 +18,7 @@ struct UltraSonic {
       delayMicroseconds(100);
       digitalWrite(trigPin, LOW);
       duration = pulseIn(echoPin, HIGH);
-      return duration * 0.034 / 2;
+      return lastDistanceSample = (duration * 0.034 / 2);
     }
 
     int calcAvg() {
@@ -29,37 +28,37 @@ struct UltraSonic {
       }
       return sum / MAX_SAMPLES;
     }
-    
+    bool isObstacleDetected() {
+      return abs(lastDistanceSample - initHeight) > MAX_THRESHOLD;
+    }
+
     UltraSonic(String objectName, int triger, int echo) : objName(objectName), trigPin(triger), echoPin(echo)  {
       pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
       pinMode(echoPin, INPUT); // Sets the echoPin as an Input
       //we start taking a first sample for init height
+      delay(1000);// wait for a sec
       calcAvg(); //to get more clear results we dump first results
       initHeight = calcAvg();
     }
 
 
 };
-
+//vibration motor pins
 const int yellowPin = 13;
 const int whitePin = 12;
 const int greenPin = 11;
 const int redPin = 10;
+//Bluetooth Pins
 const int rxPin = 6;
 const int txPin = 5;
-SoftwareSerial hc = SoftwareSerial(rxPin, txPin);
-//1 is blue
-
+//Ultrasonic pins
 const int trigPin1 = 8;
 const int echoPin1 = 9;
 const int trigPin2 = 3;
 const int echoPin2 = 4;
+SoftwareSerial hc = SoftwareSerial(rxPin, txPin); //bluetooth component
 UltraSonic leftUS = UltraSonic("left", trigPin1, echoPin1);
 UltraSonic rightUS = UltraSonic("right", trigPin2, echoPin2);
-
-
-
-
 
 void initVibrationMotors() {
   pinMode(yellowPin, OUTPUT);
@@ -68,16 +67,11 @@ void initVibrationMotors() {
   pinMode(redPin, OUTPUT);
 }
 
-
 void vib(int pin) {
   digitalWrite(pin, HIGH);
   delay(500);
   digitalWrite(pin, LOW);
 }
-
-
-
-
 
 void setup() {
   Serial.begin(9600); // Starts the serial communication
@@ -88,7 +82,7 @@ void setup() {
 }
 
 
-void readColor() {
+void readColorFromBluetooth() {
   char c;
   c = (char)hc.read();
   if (c == 'Y') {
@@ -105,7 +99,7 @@ void readColor() {
   }
 }
 
-void vibAll(){
+void vibAll() {
   digitalWrite(yellowPin, HIGH);
   digitalWrite(greenPin, HIGH);
   digitalWrite(redPin, HIGH);
@@ -116,14 +110,15 @@ void vibAll(){
 }
 
 void loop() {
-  readColor();
-  
+  readColorFromBluetooth();
+
   int dis_right = rightUS.calcDistance();
   int dis_left = leftUS.calcDistance();
-  
+
   hc.println("right:" + String(dis_right));
   hc.println("left:" + String(dis_left));
 
-  if(dis_left > (20 + leftUS.initHeight) || dis_left < (leftUS.initHeight - 20) || dis_right > (20 + rightUS.initHeight) || dis_right < (rightUS.initHeight - 20))
+  if (rightUS.isObstacleDetected() || leftUS.isObstacleDetected()) {
     vibAll();
+  }
 }
